@@ -1,0 +1,17 @@
+CC=gcc
+CFLAGS=-O2 -Wall -Wpedantic
+LUA_LIB=-llua51
+LIB_PATH=C:\\luajit
+INC_PATH=C:\\luajit
+
+.PHONY: all
+all : lake.exe
+	
+lake.exe : lake.o
+	$(CC) $(CFLAGS) -I$(INC_PATH) -L$(LIB_PATH) -o $@ $^ $(LUA_LIB)
+
+lake.o : lake.c
+	$(CC) $(CFLAGS) -I$(INC_PATH) -o $@ -c $^
+
+clean :
+	@del lake.o lake.exe
