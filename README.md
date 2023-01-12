@@ -11,7 +11,7 @@ lua(jit)-based make alternative
   * Linux: in `/usr/local/lib/lua/5.1`
   * Windows: in `C:\lake`
  
- # Installtion
+ # Installation
  * Windows: `mingw32-make -f Makefile.win`
    * Create `C:\lake` and move `lake.exe`, `lfs.dll` (from prerequisites), and the `lua` folder to it, then add to path
  * Linux: `make`
