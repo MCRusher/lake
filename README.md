@@ -18,4 +18,5 @@ lua(jit)-based make alternative
    * move `lake` executable to `/usr/local/bin/`
    * move `lua/lake.lua` (just the file) to `/usr/local/share/lua/5.1`
    * move `lfs.so` to `/usr/local/lib/lua/5.1`
- 
+* Bootstrap: `lake`
+  * then follow the above instructions for the corresponding OS
