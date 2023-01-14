@@ -21,7 +21,7 @@ int main(int argc, char ** argv) {
 	}
 	lua_setglobal(L, "args");//for some reason, "arg" isn't recognized properly, so I'm just gonna unpack the table
 	if(luaL_dostring(L, WRAPPER_SCRIPT)){
-		printf("lake failed to start: %s\n", lua_tostring(L, -1));
+		printf("lake failed: %s\n", lua_tostring(L, -1));
 		lua_close(L);
 		return EXIT_FAILURE;
 	}
