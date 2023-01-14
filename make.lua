@@ -20,7 +20,7 @@ lake.step("lake.o", {"lake.c"},function(name, prereqs)
 end)
 
 lake.phonyStep("clean",{},function()
-    lake.rm("lake.o", OUT, lake.nativeDLLName("lfs"), "luajit", "luafilesystem")
+    lake.rm("lake.o", OUT, lake.nativeDLLName("lfs"), "luajit", "luafilesystem") --don't unwrap, not a big deal
 end)
 
 lake.phonyStep("prereqs",{},function()
@@ -29,46 +29,47 @@ lake.phonyStep("prereqs",{},function()
     lake.execute("git clone https://luajit.org/git/luajit.git")
     lake.execute("git clone https://github.com/lunarmodules/luafilesystem.git")
     lake.execute("cd luajit && {}", MAKE)
+    
+    lake.mkdir(PREFIX):unwrap()
+    lake.mkdir(LIB_PATH):unwrap()
+    lake.mkdir(INC_PATH):unwrap()
     if not lake.guessOS("Windows") then --make install doesn't work on windows
         lake.execute("cd luajit && {} install PREFIX=\"{}\"", MAKE, PREFIX)
     else
-        lake.mkdir(LIB_PATH)
-        lake.mkdir(INC_PATH)
-        lake.mkdir(PREFIX)
         lake.copyTo("luajit/src", LIB_PATH,
             "lua51.dll",
             "luajit.exe"
-        )
+        ):unwrap()
         lake.copyTo("luajit/src", INC_PATH,
             "lauxlib.h",
             "lua.h",
             "luaconf.h",
             "luajit.h",
             "lualib.h"
-        )
+        ):unwrap()
         --can be deleted if C:/luajit is added to path, alternatively, C:/luajit can be deleted as well
-        lake.copyFile("luajit/src/lua51.dll", lake.path(PREFIX, "lua51.dll"))
+        lake.copyFile("luajit/src/lua51.dll", lake.path(PREFIX, "lua51.dll")):unwrap()
         lake.printf("!!!Note: lua51.dll can be deleted from \"{}\" if \"{}\" is added to system path", PREFIX, LIB_PATH)
     end
     lake.execute("{} --shared -fPIC -Iluajit/src -o {} luafilesystem/src/lfs.c -l{}", build, lfs_name, LUA_LIB)
-    lake.copyFile(lfs_name, lfs_prefix)
+    lake.copyFile(lfs_name, lfs_prefix):unwrap()
 end)
 
 lake.phonyStep("install", {OUT},function()
     local lfs_name = lake.nativeDLLName("lfs")
     if lake.guessOS("Windows") then
-        lake.mkdir(PREFIX)
-        lake.mkdir(lake.path(PREFIX, "lua"))
+        lake.mkdir(PREFIX):unwrap()
+        lake.mkdir(lake.path(PREFIX, "lua")):unwrap()
         if lake.exists(lfs_name) then
-            lake.copyFile(lfs_name, lake.path(PREFIX, lfs_name))
+            lake.copyFile(lfs_name, lake.path(PREFIX, lfs_name)):unwrap()
         end
         lake.copyTo("./", PREFIX,
             OUT,
             "lua/lake.lua"
-        )
+        ):unwrap()
     else
         if lake.exists(lfs_name) then
-            lake.copyFile(lfs_name, lake.path(PREFIX, "lib/lua/5.1", lfs_name))
+            lake.copyFile(lfs_name, lake.path(PREFIX, "lib/lua/5.1", lfs_name)):unwrap()
         end
         lake.copy({
             OUT,
@@ -76,6 +77,6 @@ lake.phonyStep("install", {OUT},function()
         },{
             lake.path(PREFIX, "bin", OUT),
             lake.path(PREFIX, "share/lua/5.1/lake.lua")
-        })
+        }):unwrap()
     end
 end)

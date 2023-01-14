@@ -3,7 +3,55 @@ require "jit" --optional, improves results of guessOS
 
 lake = {steps = {}}
 
-lake.version = "1.1" --generally you could just check if a function is nil before using it though
+lake.version = "1.2" --generally you could just check if a function is nil before using it though
+
+--make an unwrappable error system to choose when errors are critical
+lake.Result = {}
+
+function lake.Result.new()
+    local val  = {is_err = false, msg = ""}
+    val = setmetatable(val, { __index = lake.Result })
+    return val
+end
+
+function lake.Result:setOk(msg)
+    self.is_err = false
+    self.msg = msg
+    return self
+end
+
+function lake.Result:setErr(msg)
+    self.is_err = false
+    self.msg = msg
+    return self
+end
+
+function lake.Result.newOk(msg)
+    local res = lake.Result.new()
+    return res:setOk(msg)
+end
+
+function lake.Result.newErr(msg)
+    local res = lake.Result.new()
+    return res:setErr(msg)
+end
+
+function lake.Result:unwrap()
+    assert(not self.is_err, self.msg)
+    return msg
+end
+
+function lake.Result:isOk()
+    return not self.is_err
+end
+
+function lake.Result:isErr()
+    return self.is_err
+end
+
+function lake.Result:what()
+    return self.msg
+end
 
 --guess OS by checking for system environment variables
 --can optionally specify a guess to check against
@@ -68,6 +116,7 @@ Options:
 end
 
 function lake.rm(...)
+    local result = lake.Result.newOk("Deleted file/directory")
     for _,file_or_dir in ipairs({...}) do
         if lake.exists(file_or_dir) then
             if lfs and lfs.attributes(file_or_dir,"mode") == "directory" then
@@ -79,10 +128,17 @@ function lake.rm(...)
                 end
             else
                 lake.printf("os.remove \"{}\"", file_or_dir)
-                print(os.remove(file_or_dir))
+                os.remove(file_or_dir)
             end
+            
+            if lake.exists(file_or_dir) then
+                result:setErr("Failed to delete file")
+            end
+        else
+            result:setOk("File does not exist") --not always a problem
         end
     end
+    return result
 end
 
 function lake.step(name, prereqs, step)
@@ -172,6 +228,7 @@ function lake.format(str, ...)
     end
 end
 
+--too inconsistent and broad to check for errors
 function lake.execute(str, ...)
     local cmd = lake.format(str, ...)
     print(cmd)
@@ -197,6 +254,7 @@ function lake.input(prompt)
 end
 
 function lake.inputValidFile(prompt)
+    assert(lfs, "lake.inputValidFile requires lfs")
     while true do 
         local path = lake.input(prompt)
         if lfs.attributes(path, "mode") == "file" then
@@ -208,6 +266,7 @@ function lake.inputValidFile(prompt)
 end
 
 function lake.inputValidDir(prompt)
+    assert(lfs, "lake.inputValidDir requires lfs")
     while true do 
         local path = lake.input(prompt)
         if lfs.attributes(path, "mode") == "directory" then
@@ -236,21 +295,36 @@ function lake.shortNames()
     end
 end
 
+--failing to copy a file is almost certainly always an error
+-- can use pcall if needed to handle assertion failure
 function lake.copyFile(src, dest)
-    lake.printf("lake.copy \"{}\" => \"{}\"", src, dest)
-    local infile = assert(io.open(src, "rb"))
-    local outfile = assert(io.open(dest, "wb"))
-    local data = assert(infile:read("*a"))
-    infile:close()
-    assert(outfile:write(data))
-    outfile:close()
+    local result = lake.Result.newOk("Copied file")
+    local _,status = pcall(function()
+        lake.printf("lake.copy \"{}\" => \"{}\"", src, dest)
+        local infile = assert(io.open(src, "rb"))
+        local outfile = assert(io.open(dest, "wb"))
+        local data = assert(infile:read("*a"))
+        infile:close()
+        assert(outfile:write(data))
+        outfile:close()
+    end)
+    
+    if not status then
+        result:setErr(lake.format("Failed to copy file: \"{}\" => \"{}\"", src, dest))
+    end
+    
+    return result
 end
 
 function lake.copy(srcs, dests)
     assert(#srcs == #dests)
     for i = 1, #srcs do
-        lake.copyFile(srcs[i], dests[i])
+        local file_r = lake.copyFile(srcs[i], dests[i])
+        if file_r:isErr() then
+            return file_r
+        end
     end
+    return lake.Result.newOk("Copied files")
 end
 
 function lake.path(base, ...)
@@ -276,16 +350,23 @@ function lake.copyTo(src_dir, dest_dir, ...)
         table.insert(srcs, lake.path(src_dir, files[i]))
         table.insert(dests, lake.path(dest_dir, files[i]))
     end
-    lake.copy(srcs, dests)
+    return lake.copy(srcs, dests)
 end
 
 function lake.mkdir(path)
+    local result = lake.Result.newOk("Created directory")
     if lfs then
         print("lfs.mkdir \"" .. path .. "\"")
         lfs.mkdir(path)
     else
         lake.execute("mkdir \"{}\"", path)
     end
+    
+    if not lake.exists(path) then
+        result:setErr("Failed to create directory")
+    end
+    
+    return result
 end
 
 --includes rpath only if not on windows (rpath doesn't work on Windows)
@@ -296,7 +377,7 @@ end
 function lake.split(str, sep)
     local sep = sep or " "
     local t = {}
-    for s in str:gmatch("([^ ]+)") do
+    for s in str:gmatch("([^" .. sep .. "]+)") do
         table.insert(t, s)
     end
     return t
