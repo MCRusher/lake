@@ -68,32 +68,6 @@ Options:
 end
 
 function lake.rm(...)
-    --[[local function rmdirs(path)
-        local files = {}
-        for d in lfs.dir(path) do
-            if d ~= "." and d ~= ".." then
-                table.insert(files, lake.path(path, d))
-            end
-        end
-        for _,file in ipairs(files) do
-            print(file)
-            if lfs.attributes(file, "mode") == "directory" then
-                rmdirs(file)
-                lfs.rmdir(file)
-            else
-                os.remove(file)
-            end
-        end
-        lfs.rmdir(path)
-    end
-    for _,file_or_dir in ipairs({...}) do
-        print(file_or_dir)
-        if lfs and lfs.attributes(file_or_dir,"mode") == "directory" then
-            rmdirs(file_or_dir)
-        else
-            os.remove(file_or_dir)
-        end
-    end]]--
     for _,file_or_dir in ipairs({...}) do
         if lake.exists(file_or_dir) then
             if lfs and lfs.attributes(file_or_dir,"mode") == "directory" then
