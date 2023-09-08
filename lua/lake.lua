@@ -135,9 +135,20 @@ function lake.rm(...)
                 result:setErr("Failed to delete file")
             end
         else
-            result:setOk("File does not exist") --not always a problem
+            result:setOk("File does not exist") --not usually a problem
         end
     end
+    return result
+end
+
+-- same as rm except the file not existing is considered an error
+function lake.rmExisting(...)
+    local result = lake.rm(...)
+
+    if result:what() == "File does not exist" then
+        result:setErr("File does not exist")
+    end
+    
     return result
 end
 
@@ -228,11 +239,21 @@ function lake.format(str, ...)
     end
 end
 
---too inconsistent and broad to check for errors
-function lake.execute(str, ...)
+-- run a shell command and error if return code was not 'expected'
+function lake.executeExpect(str, expected, ...)
+    local result = lake.Result.newOk("Command executed successfully")
     local cmd = lake.format(str, ...)
     print(cmd)
-    return os.execute(cmd)
+    if os.execute(cmd) ~= expected then
+        result = Result.newErr("Command failed")
+    end
+    return result
+end
+
+
+-- run a shell command and error if return code was not 0
+function lake.execute(str, ...)
+    return lake.executeExpect(str, 0, ...)
 end
 
 function lake.exists(file)

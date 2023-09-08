@@ -1,8 +1,8 @@
 CC = CC or "gcc"
 MAKE = MAKE or (lake.guessOS("Windows") and "mingw32-make" or "make")
 CFLAGS = CFLAGS or "-O2 -Wall -Wpedantic"
-LIB_PATH = LIB_PATH or (lake.guessOS("Windows") and "C:/luajit" or "/usr/local/lib")
-INC_PATH = INC_PATH or (lake.guessOS("Windows") and  "C:/luajit" or "/usr/local/include/luajit-2.1")
+LIB_PATH = LIB_PATH or (lake.guessOS("Windows") and "C:/luajit" or "/usr/lib")
+INC_PATH = INC_PATH or (lake.guessOS("Windows") and  "C:/luajit" or "/usr/include/luajit-2.1")
 LUA_LIB = LUA_LIB or (lake.guessOS("Windows") and "lua51" or "luajit-5.1")
 PREFIX = PREFIX or (lake.guessOS("Windows") and "C:/lake" or "/usr/local/")
 OUT = OUT or lake.nativeBinaryName("lake")
@@ -12,11 +12,11 @@ local build = lake.format("{} {} -L\"{}\" -I\"{}\" {}", CC, CFLAGS, LIB_PATH, IN
 lake.phonyStep("all", {OUT})
 
 lake.step(OUT, {"lake.o"},function(name, prereqs)
-    lake.execute("{} -o {} {} -l{}", build, name, lake.cat(prereqs, " "), LUA_LIB)
+    lake.execute("{} -o {} {} -l{}", build, name, lake.cat(prereqs, " "), LUA_LIB):unwrap()
 end)
 
 lake.step("lake.o", {"lake.c"},function(name, prereqs)
-    lake.execute("{} -o {} -c {}", build, name, lake.cat(prereqs, " "))
+    lake.execute("{} -o {} -c {}", build, name, lake.cat(prereqs, " ")):unwrap()
 end)
 
 lake.phonyStep("clean",{},function()
@@ -34,7 +34,7 @@ lake.phonyStep("prereqs",{},function()
     lake.mkdir(LIB_PATH):unwrap()
     lake.mkdir(INC_PATH):unwrap()
     if not lake.guessOS("Windows") then --make install doesn't work on windows
-        lake.execute("cd luajit && {} install PREFIX=\"{}\"", MAKE, PREFIX)
+        lake.execute("cd luajit && {} install PREFIX=\"{}\"", MAKE, PREFIX):unwrap()
     else
         lake.copyTo("luajit/src", LIB_PATH,
             "lua51.dll",
@@ -51,7 +51,7 @@ lake.phonyStep("prereqs",{},function()
         lake.copyFile("luajit/src/lua51.dll", lake.path(PREFIX, "lua51.dll")):unwrap()
         lake.printf("!!!Note: lua51.dll can be deleted from \"{}\" if \"{}\" is added to system path", PREFIX, LIB_PATH)
     end
-    lake.execute("{} --shared -fPIC -Iluajit/src -o {} luafilesystem/src/lfs.c -l{}", build, lfs_name, LUA_LIB)
+    lake.execute("{} --shared -fPIC -Iluajit/src -o {} luafilesystem/src/lfs.c -l{}", build, lfs_name, LUA_LIB):unwrap()
     lake.copyFile(lfs_name, lfs_prefix):unwrap()
 end)
 
