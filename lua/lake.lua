@@ -3,7 +3,7 @@ require "jit" --optional, improves results of guessOS
 
 lake = {steps = {}}
 
-lake.version = "1.2.1" --generally you could just check if a function is nil before using it though
+lake.version = "1.2.2" --generally you could just check if a function is nil before using it though
 
 --make an unwrappable error system to choose when errors are critical
 lake.Result = {}
